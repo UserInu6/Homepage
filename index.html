@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Opacity & Interface CSS variables ── */
+    :root {
+      --idle-bar-alpha:   0.40;   /* search bar before grid opens */
+      --active-bar-alpha: 0.82;   /* search bar after grid opens  */
+      --card-alpha:       0.75;   /* favorite card background     */
+      --add-card-alpha:   0.60;   /* slightly less opacity for the add card */
+      --ui-blur:          10px;   /* backdrop blur for UI elements */
+    }
+
+    /* Set default font here, let elements inherit it */
+    body {
+      width: 100vw; height: 100vh; overflow: hidden;
+      font-family: 'Press Start 2P', monospace;
+      background: #111; user-select: none;
+    }
+    input, button, select, textarea { font-family: inherit; }
+
+    /* ── BACKGROUND ── */
+    #bg {
+      position: fixed; inset: 0;
+      background: url('https://i.ibb.co/DPwgyrWr/Aya-Sofia-AI.png') center/cover no-repeat;
+      background-color: #2a1e10; cursor: default; z-index: 0;
+    }
+    #bg::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.05) 50%,rgba(0,0,0,.25) 100%);
+      pointer-events: none;
+    }
+
+    /* ── CLOCK ── */
+    #clock-wrap {
+      position: fixed; top: 28px; left: 32px;
+      z-index: 10; color: #fff;
+      text-shadow: 2.5px 2.5px 0 rgba(0,0,0,.6); pointer-events: none;
+    }
+    #time-line {
+      font-size: clamp(9px,3.5vw,28px); letter-spacing: 2px; line-height: 1.1;
+      display: flex; align-items: baseline; gap: 3px;
+    }
+    #ampm { font-size: clamp(14px,1.5vw,22px); }
+    #date-line {
+      font-size: clamp(10px,1.1vw,11px); margin-top: 8px;
+      letter-spacing: 1px; color: rgba(255,255,255,.95);
+    }
+
+    /* ── QUOTE ── */
+    #quote-wrap {
+      position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
+      z-index: 10; color: #fff; text-align: center;
+      font-size: clamp(5px,.90vw,10px); line-height: 1.7; letter-spacing: .4px;
+      text-shadow: 2px 1px 4px rgba(0,0,0,.7); max-width: 510px; pointer-events: none;
+    }
+
+    /* ── 9 DOTS ── */
+    #dots-btn {
+      position: fixed; top: 20px; right: 24px; z-index: 20;
+      width: 44px; height: 44px;
+      display: grid; grid-template-columns: repeat(3,8px); grid-template-rows: repeat(3,8px);
+      gap: 4px; align-content: center; justify-content: center;
+      cursor: pointer; padding: 4px; border-radius: 50%; transition: background .2s;
+	  transform: scale(0.8);
+      transform-origin: center;
+      transition: transform 0.2s ease;
+    }
+    #dots-btn:hover { background: rgba(255,255,255,.15); }
+    #dots-btn span {
+      display: block; width: 7px; height: 7px;
+      background: #fff; border-radius: 50%; box-shadow: 1px 1px 3px rgba(0,0,0,.5);
+    }
+
+    /* ── SEARCH BAR ── */
+    #search-wrap {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      z-index: 10; width: min(470px,90vw);
+      transition: transform .4s cubic-bezier(.4,0,.2,1), top .4s cubic-bezier(.4,0,.2,1);
+    }
+    #search-wrap.grid-visible { top: 130px; transform: translate(-50%,0); }
+    #search-bar {
+      display: flex; align-items: center; gap: 12px;
+      /* opacity and blur controlled by CSS var */
+      background: rgba(20,15,10,var(--idle-bar-alpha));
+      backdrop-filter: blur(var(--ui-blur));
+      border: 1px solid rgba(255,255,255,.12); border-radius: 40px;
+      padding: 14px 22px; box-shadow: 0 4px 24px rgba(0,0,0,.4);
+      cursor: text;
+      transition: background .4s ease, border-color .2s, box-shadow .2s;
+    }
+    #search-wrap.grid-visible #search-bar {
+      background: rgba(20,15,10,var(--active-bar-alpha));
+    }
+    #search-bar:focus-within {
+      border-color: rgba(255,255,255,.3);
+      box-shadow: 0 4px 32px rgba(0,0,0,.6);
+    }
+    #engine-icon-wrap {
+      width: 27px; height: 27px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #engine-icon-wrap img { width: 27px; height: 27px; object-fit: contain; border-radius: 4px; }
+    #search-input {
+      background: none; border: none; outline: none;
+      color: rgba(255,255,255,.7); font-size: clamp(8px,.85vw,11px); width: 100%; letter-spacing: 1px; caret-color: #fff;
+    }
+    #search-input::placeholder { color: rgba(255,255,255,.45); }
+
+    /* ── FAVORITES ── */
+    #fav-section {
+      position: fixed; top: 210px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      z-index: 10; width: min(860px,95vw);
+      opacity: 0; pointer-events: none;
+      transition: opacity .35s ease, transform .35s ease;
+    }
+    #fav-section.visible { opacity: 1; pointer-events: all; transform: translateX(-50%) translateY(0); }
+    #fav-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+
+    .fav-card {
+      width: 150px; height: 101px;
+      /* opacity and blur controlled by CSS var */
+      background: rgba(0,0,0,var(--card-alpha));
+      backdrop-filter: blur(var(--ui-blur));
+      border: 1px solid rgba(255,255,255,.08); border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      cursor: grab; transition: background .2s, transform .15s, border-color .2s;
+      text-decoration: none; position: relative; overflow: hidden;
+    }
+    .fav-card:not(.add-card):active { cursor: grabbing; }
+    .fav-card:hover { background: rgba(30,20,12,.8); border-color: rgba(255,255,255,.2); transform: translateY(-4px); }
+    .fav-card img { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; }
+    .fav-card .fav-title {
+      font-size: 9px; color: #fff;
+      text-align: center; letter-spacing: .5px; max-width: 130px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .fav-card.add-card {
+      border: 2px dashed rgba(255,255,255,.25); 
+      background: rgba(10, 8, 5, var(--add-card-alpha)); 
+      cursor: pointer;
+    }
+    .fav-card.add-card:hover { border-color: rgba(255,255,255,.5); }
+    .add-icon { font-size: 32px; color: rgba(255,255,255,.7); line-height: 1; font-family: sans-serif; font-weight: 200; }
+
+    /* drag states */
+    .fav-card.dragging { opacity: .3; transform: scale(.95) !important; box-shadow: none; }
+    .fav-card.drag-over {
+      border-color: rgba(255,255,255,.75) !important;
+      background: rgba(255,255,255,.12) !important;
+      transform: scale(1.05) !important;
+    }
+    /* drag handle dot-grid hint */
+    .drag-handle {
+      position: absolute; top: 5px; right: 8px;
+      font-size: 13px; color: rgba(255,255,255,0); line-height: 1;
+      font-family: sans-serif; transition: color .2s; pointer-events: none;
+    }
+    .fav-card:not(.add-card):hover .drag-handle { color: rgba(255,255,255,.45); }
+
+    /* ── GOOGLE APPS PANEL ── */
+    #apps-panel {
+      position: fixed; top: 0; right: -320px; bottom: 0; width: 300px;
+      background: rgba(10,8,5,.95); backdrop-filter: blur(20px);
+      border-left: 1px solid rgba(255,255,255,.08);
+      z-index: 30; transition: right .35s cubic-bezier(.4,0,.2,1);
+      padding: 24px 20px; overflow-y: auto;
+    }
+    #apps-panel.open { right: 0; }
+    #apps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-top: 60px; }
+    .app-item {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 12px 8px; border-radius: 12px; cursor: pointer; text-decoration: none; transition: background .2s;
+    }
+    .app-item:hover { background: rgba(255,255,255,.08); }
+    .app-item img { width: 40px; height: 40px; border-radius: 8px; }
+    .app-item span { font-size: 7px; color: #ccc; text-align: center; letter-spacing: .3px; }
+    #panel-close {
+      position: absolute; top: 16px; right: 16px;
+      background: none; border: none; color: rgba(255,255,255,.5);
+      font-size: 20px; cursor: pointer; padding: 6px; border-radius: 50%;
+      transition: color .2s, background .2s; line-height: 1;
+      font-family: sans-serif;
+    }
+    #panel-close:hover { color: #fff; background: rgba(255,255,255,.1); }
+    #apps-panel .app-item img[src*="notebooklm"] { background: #fff; border-radius: 50% !important; padding: 5px; }
+
+    /* ── OVERLAY ── */
+    #overlay { position: fixed; inset: 0; z-index: 25; display: none; }
+    #overlay.active { display: block; }
+
+    /* ── MODAL BASE ── */
+    .modal-bg {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: rgba(15,12,8,.97); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 20px; padding: 32px; width: 430px;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.8); animation: modalIn .25s ease;
+    }
+    @keyframes modalIn {
+      from { transform: scale(.92) translateY(12px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateX(14px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .modal h2 {
+      font-size: 11px; color: #fff; margin-bottom: 24px; letter-spacing: 1px;
+    }
+    .modal label {
+      display: block; font-size: 8px; color: rgba(255,255,255,.6); margin-bottom: 6px; letter-spacing: .5px;
+    }
+    .modal input[type="text"] {
+      width: 100%; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.15); border-radius: 10px;
+      padding: 10px 14px; color: #fff;
+      font-size: 9px; outline: none; margin-bottom: 16px; transition: border-color .2s;
+    }
+    .modal input[type="text"]:focus { border-color: rgba(255,255,255,.4); }
+    .modal-preview { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; min-height: 50px; }
+    .modal-preview img { width: 40px; height: 40px; border-radius: 8px; object-fit: contain; display: none; }
+    .modal-preview span { font-size: 8px; color: rgba(255,255,255,.5); }
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn {
+      font-size: 8px; padding: 10px 18px; border: none; border-radius: 10px;
+      cursor: pointer; letter-spacing: .5px; transition: opacity .2s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: rgba(255,255,255,.9); color: #111; }
+    .btn-primary:hover { background: #fff; }
+    .btn-cancel { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
+    .btn-cancel:hover { background: rgba(255,255,255,.18); }
+    .btn-danger { background: rgba(220,50,50,.8); color: #fff; }
+    .btn-danger:hover { background: rgba(220,50,50,1); }
+
+    /* ── CONTEXT MENU ── */
+    #ctx-menu {
+      position: fixed; z-index: 60; background: rgba(15,12,8,.97);
+      border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 6px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.7); display: none; min-width: 140px;
+      animation: ctxIn .15s ease;
+    }
+    @keyframes ctxIn { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    #ctx-menu button {
+      display: block; width: 100%; background: none; border: none; color: #fff;
+      font-size: 8px; text-align: left;
+      padding: 10px 14px; cursor: pointer; border-radius: 8px; letter-spacing: .5px; transition: background .15s;
+    }
+    #ctx-menu button:hover { background: rgba(255,255,255,.1); }
+    #ctx-menu button.danger { color: #f66; }
+    #ctx-menu button.danger:hover { background: rgba(220,50,50,.2); }
+    #ctx-divider { height: 1px; background: rgba(255,255,255,.08); margin: 4px 8px; }
+
+    /* ── SCROLLBARS ── */
+    #apps-panel::-webkit-scrollbar, .modal::-webkit-scrollbar { width: 4px; }
+    #apps-panel::-webkit-scrollbar-track, .modal::-webkit-scrollbar-track { background: transparent; }
+    #apps-panel::-webkit-scrollbar-thumb, .modal::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+
+    /* ── SETTINGS BTN ── */
+    #settings-btn {
+      position: fixed; top: 20px; right: 78px; z-index: 20;
+      width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border-radius: 50%; transition: background .2s, transform .3s; color: #fff;
+    }
+    #settings-btn:hover { background: rgba(255,255,255,.15); transform: rotate(45deg); }
+    #settings-btn svg { width: 24px; height: 24px; filter: drop-shadow(1px 1px 2px rgba(0,0,0,.5)); }
+
+    /* ── SETTINGS FORM ELEMENTS ── */
+    .settings-divider { height: 1px; background: rgba(255,255,255,.08); margin: 4px 0 20px; }
+
+    .settings-select {
+      width: 100%; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.15); border-radius: 10px;
+      padding: 10px 36px 10px 14px; color: #fff;
+      font-size: 9px;
+      outline: none; margin-bottom: 16px; cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    .settings-select option { background: #1a1510; color: #fff; }
+    .settings-select:focus { border-color: rgba(255,255,255,.4); }
+
+    .toggle-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; cursor: pointer; }
+    .toggle-row input[type="checkbox"] { width: 18px !important; height: 18px; margin: 0 !important; accent-color: rgba(255,255,255,.85); cursor: pointer; }
+    .toggle-row span { font-size: 8px; color: rgba(255,255,255,.7); }
+
+    /* ── ENGINE CARDS ── */
+    .engine-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .engine-card {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,.12); border-radius: 10px;
+      cursor: pointer; transition: border-color .2s, background .2s;
+      background: rgba(255,255,255,.04);
+    }
+    .engine-card:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.28); }
+    .engine-card.selected { border-color: rgba(255,255,255,.65); background: rgba(255,255,255,.13); }
+    .engine-card img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; border-radius: 3px; }
+    .engine-card .eng-icon-ph {
+      width: 22px; height: 22px; flex-shrink: 0; background: rgba(255,255,255,.15);
+      border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #fff; font-family: sans-serif;
+    }
+    .engine-card span { font-size: 7px; color: rgba(255,255,255,.8); letter-spacing: .3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* custom engine form */
+    #custom-engine-form {
+      display: none; padding: 14px; margin-bottom: 16px;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+    }
+    #custom-engine-form.visible { display: block; animation: pageIn .2s ease; }
+    .ce-hint { font-size: 6px; color: rgba(255,255,255,.35); letter-spacing: .3px; }
+
+    /* ── BG BROWSE ── */
+    .bg-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+    .bg-row input[type="text"] { flex: 1; margin-bottom: 0 !important; }
+    .btn-browse {
+      font-size: 7px; padding: 0 12px;
+      border: 1px solid rgba(255,255,255,.2); border-radius: 10px;
+      background: rgba(255,255,255,.08); color: rgba(255,255,255,.85);
+      cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 5px;
+      transition: background .2s, border-color .2s;
+    }
+    .btn-browse:hover { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.4); }
+    #bg-file-name {
+      display: block; font-size: 7px;
+      color: rgba(255,255,255,.38); margin-bottom: 16px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 14px;
+    }
+    #bg-file-name.has-file { color: rgba(100,220,120,.85); }
+
+    /* ── SECTION NAV BUTTON ── */
+    .btn-section-nav {
+      display: flex; align-items: center; justify-content: space-between; width: 100%;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px; padding: 13px 16px; color: rgba(255,255,255,.8);
+      font-size: 8px; letter-spacing: .5px;
+      cursor: pointer; margin-bottom: 16px; transition: background .2s, border-color .2s;
+    }
+    .btn-section-nav:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.28); }
+    .btn-section-nav .nav-arrow { font-size: 16px; color: rgba(255,255,255,.5); }
+
+    /* ── SETTINGS SUB-PAGE ── */
+    #settings-sub-page { display: none; }
+
+    .back-btn {
+      background: none; border: none; color: rgba(255,255,255,.55);
+      font-size: 8px;
+      cursor: pointer; padding: 0; margin-bottom: 22px; display: block;
+      transition: color .2s; letter-spacing: .5px;
+    }
+    .back-btn:hover { color: #fff; }
+
+    .sub-section-label {
+      font-size: 8px;
+      color: rgba(255,255,255,.6); letter-spacing: .5px; margin-bottom: 4px; display: block;
+    }
+    .opacity-hint {
+      font-size: 6px;
+      color: rgba(255,255,255,.32); margin-bottom: 10px; letter-spacing: .3px;
+    }
+    .slider-row {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+    }
+    .slider-row input[type="range"] {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 4px; border-radius: 2px; outline: none; cursor: pointer;
+      background: rgba(255,255,255,.15);
+    }
+    .slider-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      background: #fff; border-radius: 50%; cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,.45); transition: transform .1s;
+    }
+    .slider-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    .slider-val {
+      font-size: 8px;
+      color: rgba(255,255,255,.7); min-width: 36px; text-align: right;
+    }
+    .reset-row { display: flex; justify-content: space-between; align-items: center; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 600px), (orientation: portrait) {
+      #quote-wrap { top: 105px; width: 90vw; max-width: 90vw; font-size: clamp(8px,2.2vw,10px); line-height: 1.6; }
+      #search-wrap { top: 55%; }
+      #search-wrap.grid-visible { top: 185px; }
+      #fav-section { top: 265px; }
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    body { animation: fadeIn .5s ease; }
+  </style>
+</head>
+<body>
+
+<div id="bg"></div>
+
+<div id="clock-wrap">
+  <div id="time-line"><span id="hours">12</span>:<span id="minutes">00</span><span id="ampm">PM</span></div>
+  <div id="date-line"></div>
+</div>
+
+<div id="quote-wrap">We look at the world once, in childhood.<br>The rest is memory</div>
+
+<div id="settings-btn" title="Settings" onclick="openSettings()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+</div>
+
+<div id="dots-btn" title="Google Apps">
+  <span></span><span></span><span></span>
+  <span></span><span></span><span></span>
+  <span></span><span></span><span></span>
+</div>
+
+<div id="search-wrap">
+  <div id="search-bar" onclick="focusSearch(event)">
+    <div id="engine-icon-wrap"></div>
+    <input type="text" id="search-input" placeholder="Search the Web"
+      onkeydown="handleSearch(event)" onclick="stopProp(event)" />
+  </div>
+</div>
+
+<div id="fav-section"><div id="fav-grid"></div></div>
+
+<div id="overlay" onclick="closePanel()"></div>
+<div id="apps-panel">
+  <button id="panel-close" onclick="closePanel()">✕</button>
+  <div id="apps-grid"></div>
+</div>
+
+<!-- Favorite Add/Edit Modal -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h2 id="modal-title">Add Website</h2>
+    <label>URL</label>
+    <input type="text" id="m-url" placeholder="https://example.com" oninput="previewIcon()" />
+    <label>Display Title</label>
+    <input type="text" id="m-title" placeholder="My Site" />
+    <label>Custom Image URL <span style="color:rgba(255,255,255,.3);font-size:7px">(optional)</span></label>
+    <input type="text" id="m-img" placeholder="Leave blank to auto-detect" oninput="previewIcon()" />
+    <div class="modal-preview"><img id="m-preview" /><span id="m-hint">Enter a URL to preview icon</span></div>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div id="ctx-menu">
+  <button onclick="ctxEdit()">✎ Edit</button>
+  <div id="ctx-divider"></div>
+  <button class="danger" onclick="ctxDelete()">✕ Delete</button>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-bg" id="settings-modal">
+  <div class="modal" onclick="stopProp(event)">
+
+    <!-- ══ MAIN PAGE ══ -->
+    <div id="settings-main-page">
+      <h2>⚙ Settings</h2>
+
+      <!-- Search Engine -->
+      <label>Search Engine</label>
+      <div class="engine-grid" id="engine-cards"></div>
+
+      <!-- Custom engine form -->
+      <div id="custom-engine-form">
+        <label>Engine Name</label>
+        <input type="text" id="ce-name" placeholder="My Engine" oninput="onCustomEngineChange()" />
+        <label>Search URL  <span class="ce-hint">use %s for the query</span></label>
+        <input type="text" id="ce-url" placeholder="https://example.com/search?q=%s" oninput="onCustomEngineChange()" />
+        <label>Icon URL  <span class="ce-hint">(optional)</span></label>
+        <input type="text" id="ce-icon" placeholder="https://example.com/favicon.ico" oninput="onCustomEngineChange()" />
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- Background -->
+      <label>Background Image</label>
+      <div class="bg-row">
+        <input type="text" id="s-bg" placeholder="https://... or file:///D:/path/image.jpg" oninput="onBgUrlType()" />
+        <button class="btn-browse" onclick="document.getElementById('bg-file').click()">📁 Browse</button>
+        <input type="file" id="bg-file" accept="image/*" style="display:none" onchange="handleBgFile(this)" />
+      </div>
+      <span id="bg-file-name">No file chosen</span>
+
+      <div class="settings-divider"></div>
+
+      <!-- Toggles -->
+      <label class="toggle-row" for="s-quotes">
+        <input type="checkbox" id="s-quotes" onchange="syncSettingsFromUI()" />
+        <span>Show Daily Quote</span>
+      </label>
+
+      <label>Clock Format</label>
+      <select id="s-clock" class="settings-select" onchange="syncSettingsFromUI()">
+        <option value="12h">12-Hour (AM / PM)</option>
+        <option value="24h">24-Hour</option>
+      </select>
+
+      <label>Date Format</label>
+      <select id="s-date" class="settings-select" onchange="syncSettingsFromUI()">
+        <option value="DD MMM YYYY">DD MMM YYYY</option>
+        <option value="YYYY MMM DD">YYYY MMM DD</option>
+        <option value="MMM DD YYYY">MMM DD YYYY</option>
+      </select>
+
+      <div class="settings-divider"></div>
+
+      <!-- Interface sub-panel trigger -->
+      <button class="btn-section-nav" onclick="showSubPanel()">
+        Interface & Opacity
+        <span class="nav-arrow">›</span>
+      </button>
+
+      <div class="modal-btns">
+        <button class="btn btn-primary" onclick="closeSettings()">Done</button>
+      </div>
+    </div><!-- end #settings-main-page -->
+
+    <!-- ══ INTERFACE SUB-PAGE ══ -->
+    <div id="settings-sub-page">
+      <button class="back-btn" onclick="hideSubPanel()">‹ Back</button>
+      <h2 style="margin-bottom:22px;">Interface</h2>
+
+      <!-- Idle bar -->
+      <span class="sub-section-label">Search Bar — Before Click</span>
+      <p class="opacity-hint">Opacity while the favorites grid is hidden</p>
+      <div class="slider-row">
+        <input type="range" id="s-idle-alpha" min="0" max="100" step="1" oninput="liveOpacity()" />
+        <span class="slider-val" id="idle-val">40%</span>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- Active bar -->
+      <span class="sub-section-label">Search Bar — After Click</span>
+      <p class="opacity-hint">Opacity while the favorites grid is visible</p>
+      <div class="slider-row">
+        <input type="range" id="s-active-alpha" min="0" max="100" step="1" oninput="liveOpacity()" />
+        <span class="slider-val" id="active-val">82%</span>
+      </div>
+
+      <!-- Cards -->
+      <span class="sub-section-label">Cards — After Click</span>
+      <p class="opacity-hint">Background opacity of each favorite card</p>
+      <div class="slider-row">
+        <input type="range" id="s-card-alpha" min="0" max="100" step="1" oninput="liveOpacity()" />
+        <span class="slider-val" id="card-val">75%</span>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- Blur -->
+      <span class="sub-section-label">Interface Blur</span>
+      <p class="opacity-hint">Backdrop blur strength for search bar and cards</p>
+      <div class="slider-row">
+        <input type="range" id="s-blur" min="0" max="40" step="1" oninput="liveOpacity()" />
+        <span class="slider-val" id="blur-val">10px</span>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="reset-row">
+        <button class="btn btn-danger" style="font-size:7px;" onclick="resetOpacities()">↺ Reset Defaults</button>
+        <button class="btn btn-primary" onclick="saveOpacities()">Save</button>
+      </div>
+    </div><!-- end #settings-sub-page -->
+
+  </div><!-- end .modal -->
+</div><!-- end #settings-modal -->
+
+<script>
+// ═══════════════════════════════════════════
+//  ENGINE DEFINITIONS
+// ═══════════════════════════════════════════
+const ENGINES = {
+  google: { name:'Google',     url:'https://www.google.com/search?q=',  iconURL:'https://ssl.gstatic.com/images/branding/product/1x/googleg_64dp.png' },
+  brave:  { name:'Brave',      url:'https://search.brave.com/search?q=', iconURL:'https://brave.com/favicon.ico' },
+  bing:   { name:'Bing',       url:'https://www.bing.com/search?q=',     iconURL:'https://www.bing.com/favicon.ico' },
+  ddg:    { name:'DuckDuckGo', url:'https://duckduckgo.com/?q=',         iconURL:'https://duckduckgo.com/favicon.ico' },
+  custom: { name:'Custom',     url:'',                                   iconURL:'' },
+};
+
+function syncCustomEngine() {
+  const ce = S.customEngine || {};
+  ENGINES.custom.name    = ce.name    || 'Custom';
+  ENGINES.custom.url     = ce.url     || '';
+  ENGINES.custom.iconURL = ce.iconURL || '';
+}
+
+// ═══════════════════════════════════════════
+//  SETTINGS STATE
+// ═══════════════════════════════════════════
+const DEFAULTS = {
+  bg: 'https://i.ibb.co/DPwgyrWr/Aya-Sofia-AI.png',
+  showQuotes: true, clockFormat: '12h', dateFormat: 'DD MMM YYYY',
+  engine: 'google',
+  idleBarAlpha: 0.40, activeBarAlpha: 0.82, cardAlpha: 0.75, uiBlur: 5,
+};
+
+let S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('userSettings') || '{}') };
+
+function saveSettings() { localStorage.setItem('userSettings', JSON.stringify(S)); }
+
+function applyAll() {
+  applyBgFromState();
+  document.getElementById('quote-wrap').style.display = S.showQuotes ? 'block' : 'none';
+  updateClock();
+  syncCustomEngine();
+  renderEngineIcon();
+  applyOpacities();
+}
+
+function syncSettingsFromUI() {
+  S.showQuotes  = document.getElementById('s-quotes').checked;
+  S.clockFormat = document.getElementById('s-clock').value;
+  S.dateFormat  = document.getElementById('s-date').value;
+  saveSettings(); applyAll();
+}
+
+function loadSettingsUI() {
+  document.getElementById('s-bg').value       = S.bg || '';
+  document.getElementById('s-quotes').checked = S.showQuotes;
+  document.getElementById('s-clock').value    = S.clockFormat;
+  document.getElementById('s-date').value     = S.dateFormat;
+  syncCustomEngine();
+  renderEngineCards();
+  updateBgFileLabel();
+}
+
+function openSettings()  { loadSettingsUI(); document.getElementById('settings-modal').classList.add('open'); }
+function closeSettings() { syncSettingsFromUI(); document.getElementById('settings-modal').classList.remove('open'); }
+
+// ── Sub-panel ──
+function showSubPanel() {
+  loadOpacityUI();
+  document.getElementById('settings-main-page').style.display = 'none';
+  const sp = document.getElementById('settings-sub-page');
+  sp.style.display = 'block';
+  sp.style.animation = 'pageIn .2s ease forwards';
+}
+function hideSubPanel() {
+  document.getElementById('settings-sub-page').style.display = 'none';
+  const mp = document.getElementById('settings-main-page');
+  mp.style.display = 'block';
+  mp.style.animation = 'pageIn .2s ease forwards';
+}
+
+// ═══════════════════════════════════════════
+//  OPACITY & BLUR
+// ═══════════════════════════════════════════
+function applyOpacities() {
+  const r = document.documentElement;
+  const cardAlpha = S.cardAlpha ?? DEFAULTS.cardAlpha;
+  r.style.setProperty('--idle-bar-alpha',   S.idleBarAlpha   ?? DEFAULTS.idleBarAlpha);
+  r.style.setProperty('--active-bar-alpha', S.activeBarAlpha ?? DEFAULTS.activeBarAlpha);
+  r.style.setProperty('--card-alpha',       cardAlpha);
+  r.style.setProperty('--add-card-alpha',   Math.max(0, cardAlpha - 0.15)); // Always 15% less opacity
+  r.style.setProperty('--ui-blur',          (S.uiBlur        ?? DEFAULTS.uiBlur) + 'px');
+}
+
+function loadOpacityUI() {
+  const idle   = Math.round((S.idleBarAlpha   ?? DEFAULTS.idleBarAlpha)   * 100);
+  const active = Math.round((S.activeBarAlpha ?? DEFAULTS.activeBarAlpha) * 100);
+  const card   = Math.round((S.cardAlpha      ?? DEFAULTS.cardAlpha)      * 100);
+  const blur   = S.uiBlur ?? DEFAULTS.uiBlur;
+
+  document.getElementById('s-idle-alpha').value   = idle;
+  document.getElementById('s-active-alpha').value = active;
+  document.getElementById('s-card-alpha').value   = card;
+  document.getElementById('s-blur').value         = blur;
+
+  document.getElementById('idle-val').textContent   = idle   + '%';
+  document.getElementById('active-val').textContent = active + '%';
+  document.getElementById('card-val').textContent   = card   + '%';
+  document.getElementById('blur-val').textContent   = blur   + 'px';
+  updateSliderTracks();
+}
+
+function liveOpacity() {
+  const idle   = document.getElementById('s-idle-alpha').value;
+  const active = document.getElementById('s-active-alpha').value;
+  const card   = document.getElementById('s-card-alpha').value;
+  const blur   = document.getElementById('s-blur').value;
+
+  document.getElementById('idle-val').textContent   = idle   + '%';
+  document.getElementById('active-val').textContent = active + '%';
+  document.getElementById('card-val').textContent   = card   + '%';
+  document.getElementById('blur-val').textContent   = blur   + 'px';
+
+  const r = document.documentElement;
+  r.style.setProperty('--idle-bar-alpha',   idle   / 100);
+  r.style.setProperty('--active-bar-alpha', active / 100);
+  r.style.setProperty('--card-alpha',       card   / 100);
+  r.style.setProperty('--add-card-alpha',   Math.max(0, (card / 100) - 0.15)); // Keep add card slightly less opaque
+  r.style.setProperty('--ui-blur',          blur   + 'px');
+  updateSliderTracks();
+}
+
+function updateSliderTracks() {
+  ['s-idle-alpha','s-active-alpha','s-card-alpha','s-blur'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const min = parseFloat(el.min || 0);
+    const max = parseFloat(el.max || 100);
+    const val = parseFloat(el.value);
+    const pct = ((val - min) / (max - min)) * 100 + '%';
+    el.style.background = `linear-gradient(to right, rgba(255,255,255,.65) 0%, rgba(255,255,255,.65) ${pct}, rgba(255,255,255,.15) ${pct}, rgba(255,255,255,.15) 100%)`;
+  });
+}
+
+function saveOpacities() {
+  S.idleBarAlpha   = document.getElementById('s-idle-alpha').value   / 100;
+  S.activeBarAlpha = document.getElementById('s-active-alpha').value / 100;
+  S.cardAlpha      = document.getElementById('s-card-alpha').value   / 100;
+  S.uiBlur         = parseInt(document.getElementById('s-blur').value, 10);
+  saveSettings();
+  hideSubPanel();
+}
+
+function resetOpacities() {
+  S.idleBarAlpha   = DEFAULTS.idleBarAlpha;
+  S.activeBarAlpha = DEFAULTS.activeBarAlpha;
+  S.cardAlpha      = DEFAULTS.cardAlpha;
+  S.uiBlur         = DEFAULTS.uiBlur;
+  saveSettings(); applyOpacities(); loadOpacityUI();
+}
+
+// ═══════════════════════════════════════════
+//  BACKGROUND
+// ═══════════════════════════════════════════
+function applyBgFromState() {
+  const el     = document.getElementById('bg');
+  const stored = localStorage.getItem('bgDataUrl');
+  if (S.bg)       el.style.backgroundImage = `url('${S.bg}')`;
+  else if (stored) el.style.backgroundImage = `url('${stored}')`;
+}
+
+function onBgUrlType() {
+  const val = document.getElementById('s-bg').value.trim();
+  S.bg = val;
+  if (val) { localStorage.removeItem('bgDataUrl'); updateBgFileLabel(); }
+  document.getElementById('bg').style.backgroundImage = val ? `url('${val}')` : '';
+  saveSettings();
+}
+
+function handleBgFile(input) {
+  const file = input.files[0]; if (!file) return;
+  updateBgFileLabel('Loading…');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = e.target.result;
+    try { localStorage.setItem('bgDataUrl', data); } catch(err) { console.warn('Image too large for storage.'); }
+    S.bg = ''; document.getElementById('s-bg').value = '';
+    saveSettings();
+    document.getElementById('bg').style.backgroundImage = `url('${data}')`;
+    updateBgFileLabel(file.name);
+  };
+  reader.readAsDataURL(file); input.value = '';
+}
+
+function updateBgFileLabel(name) {
+  const el = document.getElementById('bg-file-name');
+  const stored = localStorage.getItem('bgDataUrl');
+  if (name && name !== 'Loading…') { el.textContent = '\u2713 ' + name; el.classList.add('has-file'); }
+  else if (name === 'Loading…')    { el.textContent = 'Loading\u2026'; el.classList.remove('has-file'); }
+  else if (stored && !S.bg)        { el.textContent = '\u2713 File loaded'; el.classList.add('has-file'); }
+  else                             { el.textContent = 'No file chosen'; el.classList.remove('has-file'); }
+}
+
+// ═══════════════════════════════════════════
+//  SEARCH ENGINE
+// ═══════════════════════════════════════════
+function renderEngineIcon() {
+  const wrap = document.getElementById('engine-icon-wrap');
+  if (S.engine === 'custom') {
+    syncCustomEngine();
+    const ce = ENGINES.custom;
+    wrap.innerHTML = ce.iconURL
+      ? `<img src="${ce.iconURL}" alt="${ce.name}" onerror="this.style.opacity=.35"/>`
+      : `<div style="width:27px;height:27px;background:rgba(255,255,255,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-family:sans-serif;">?</div>`;
+  } else {
+    const eng = ENGINES[S.engine] || ENGINES.google;
+    wrap.innerHTML = `<img src="${eng.iconURL}" alt="${eng.name}" onerror="this.style.opacity=.35"/>`;
+  }
+}
+
+function renderEngineCards() {
+  const container = document.getElementById('engine-cards');
+  container.innerHTML = '';
+  Object.entries(ENGINES).forEach(([key, eng]) => {
+    const card = document.createElement('div');
+    card.className = 'engine-card' + (S.engine === key ? ' selected' : '');
+    card.onclick = () => selectEngine(key);
+
+    const displayName = key === 'custom' ? (S.customEngine?.name || 'Custom') : eng.name;
+    const iconSrc     = key === 'custom' ? (S.customEngine?.iconURL || '')     : eng.iconURL;
+
+    const iconHTML = iconSrc
+      ? `<img src="${iconSrc}" alt="${displayName}" onerror="this.style.opacity=.3"/>`
+      : `<div class="eng-icon-ph">?</div>`;
+
+    card.innerHTML = `${iconHTML}<span>${displayName}</span>`;
+    container.appendChild(card);
+  });
+
+  // show/hide custom form
+  const form = document.getElementById('custom-engine-form');
+  if (S.engine === 'custom') {
+    form.classList.add('visible');
+    const ce = S.customEngine || {};
+    document.getElementById('ce-name').value  = ce.name    || '';
+    document.getElementById('ce-url').value   = ce.url     || '';
+    document.getElementById('ce-icon').value  = ce.iconURL || '';
+  } else {
+    form.classList.remove('visible');
+  }
+}
+
+function selectEngine(key) {
+  S.engine = key; saveSettings();
+  renderEngineIcon(); renderEngineCards();
+}
+
+function onCustomEngineChange() {
+  const name    = document.getElementById('ce-name').value.trim();
+  const url     = document.getElementById('ce-url').value.trim();
+  const iconURL = document.getElementById('ce-icon').value.trim();
+  S.customEngine = { name: name || 'Custom', url, iconURL };
+  syncCustomEngine(); saveSettings();
+  if (S.engine === 'custom') renderEngineIcon();
+  // refresh name in card list
+  const cards = document.querySelectorAll('.engine-card');
+  const customCard = [...cards].find(c => c.classList.contains('selected'));
+  if (customCard && S.engine === 'custom') {
+    const sp = customCard.querySelector('span');
+    if (sp) sp.textContent = name || 'Custom';
+  }
+}
+
+// ═══════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════
+function updateClock() {
+  const now = new Date(); let h = now.getHours(), m = now.getMinutes();
+  if (S.clockFormat === '24h') {
+    document.getElementById('hours').textContent = String(h).padStart(2,'0');
+    document.getElementById('ampm').style.display = 'none';
+  } else {
+    const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    document.getElementById('hours').textContent = String(h).padStart(2,'0');
+    document.getElementById('ampm').textContent = ap;
+    document.getElementById('ampm').style.display = 'inline';
+  }
+  document.getElementById('minutes').textContent = String(m).padStart(2,'0');
+  const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ds = String(now.getDate()).padStart(2,'0'), ms = months[now.getMonth()], ys = now.getFullYear(), dn = days[now.getDay()];
+  let dt = '';
+  if      (S.dateFormat === 'YYYY MMM DD') dt = `${ys} ${ms} ${ds}`;
+  else if (S.dateFormat === 'MMM DD YYYY') dt = `${ms} ${ds} ${ys}`;
+  else                                     dt = `${ds} ${ms} ${ys}`;
+  document.getElementById('date-line').textContent = `${dt} [${dn}]`;
+}
+setInterval(updateClock, 1000);
+
+// ═══════════════════════════════════════════
+//  DAILY QUOTE
+// ═══════════════════════════════════════════
+const PHILOSOPHICAL_QUOTES = [
+  "We suffer more often in imagination than in reality.<br>— Seneca",
+  "The happiness of your life depends upon the quality of your thoughts.<br>— Marcus Aurelius",
+  "He who has a why to live for can bear almost any how.<br>— Friedrich Nietzsche",
+  "No man ever steps in the same river twice.<br>— Heraclitus",
+  "To find yourself, think for yourself.<br>— Socrates",
+  "We are what we repeatedly do. Excellence, then, is not an act, but a habit.<br>— Aristotle",
+  "The only true wisdom is in knowing you know nothing.<br>— Socrates",
+  "It is not death that a man should fear, but he should fear never beginning to live.<br>— Marcus Aurelius",
+  "Freedom is what you do with what's been done to you.<br>— Jean-Paul Sartre",
+  "You have power over your mind - not outside events. Realize this, and you will find strength.<br>— Marcus Aurelius",
+  "The unexamined life is not worth living.<br>— Socrates",
+  "If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it.<br>— Marcus Aurelius",
+  "Doubt is the origin of wisdom.<br>— René Descartes",
+  "Waste no more time arguing about what a good man should be. Be one.<br>— Marcus Aurelius",
+  "First say to yourself what you would be; and then do what you have to do.<br>— Epictetus",
+  "Difficulties strengthen the mind, as labor does the body.<br>— Seneca",
+  "Life must be understood backward. But it must be lived forward.<br>— Søren Kierkegaard",
+  "Do not say a little in many words but a great deal in a few.<br>— Pythagoras",
+  "Time is a created thing. To say 'I don't have time,' is like saying, 'I don't want to.'<br>— Lao Tzu",
+  "Knowing others is intelligence; knowing yourself is true wisdom.<br>— Lao Tzu",
+  "The soul becomes dyed with the color of its thoughts.<br>— Marcus Aurelius",
+  "Man is affected not by events, but by the view he takes of them.<br>— Epictetus",
+  "Wealth consists not in having great possessions, but in having few wants.<br>— Epictetus",
+  "The quieter you become, the more you are able to hear.<br>— Rumi",
+  "Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth.<br>— Marcus Aurelius"
+];
+
+function displayQuote(q) {
+  document.getElementById('quote-wrap').innerHTML = q;
+}
+
+function loadDailyQuote() {
+  const now = new Date();
+  // Changes every 12 hours reliably based on the date
+  const index = (now.getDate() + Math.floor(now.getHours() / 12)) % PHILOSOPHICAL_QUOTES.length;
+  displayQuote(PHILOSOPHICAL_QUOTES[index]);
+}
+loadDailyQuote();
+
+// ═══════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════
+function focusSearch(e) { e.stopPropagation(); document.getElementById('search-input').focus(); }
+function stopProp(e) { e.stopPropagation(); }
+
+function handleSearch(e) {
+  if (e.key !== 'Enter') return;
+  const q = e.target.value.trim(); if (!q) return;
+  if (S.engine === 'custom') {
+    syncCustomEngine();
+    const cu = ENGINES.custom;
+    if (!cu.url) { alert('Please configure your custom search engine in Settings first.'); return; }
+    window.location.href = cu.url.includes('%s') ? cu.url.replace('%s', encodeURIComponent(q)) : cu.url + encodeURIComponent(q);
+  } else {
+    const eng = ENGINES[S.engine] || ENGINES.google;
+    window.location.href = eng.url + encodeURIComponent(q);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  GRID TOGGLE
+// ═══════════════════════════════════════════
+let gridVisible = false;
+function toggleGrid(e) {
+  if (e.target.closest('#search-bar,#dots-btn,#settings-btn,#apps-panel,.modal-bg,#ctx-menu,#fav-section')) return;
+  gridVisible = !gridVisible;
+  document.getElementById('fav-section').classList.toggle('visible', gridVisible);
+  document.getElementById('search-wrap').classList.toggle('grid-visible', gridVisible);
+}
+document.getElementById('bg').addEventListener('click', toggleGrid);
+
+// ═══════════════════════════════════════════
+//  FAVORITES + DRAG & DROP
+// ═══════════════════════════════════════════
+const MAX = 15;
+let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+function saveFavorites() { localStorage.setItem('favorites', JSON.stringify(favorites)); }
+
+function getFaviconUrl(url, custom) {
+  if (custom && custom.trim()) return custom.trim();
+  try {
+    const domain = new URL(url.startsWith('http') ? url : 'https://'+url).hostname;
+    return `https://www.google.com/s2/favicons?sz=64&domain_url=${domain}`;
+  } catch { return ''; }
+}
+
+// Module-level drag state
+let dragSrcIdx = -1;
+const TD = { active:false, srcIdx:-1, targetCard:null, clone:null, timer:null, startX:0, startY:0 };
+
+function renderGrid() {
+  const grid = document.getElementById('fav-grid');
+  grid.innerHTML = '';
+
+  favorites.forEach((site, i) => {
+    const card = document.createElement('a');
+    card.className = 'fav-card'; card.href = site.url; card.title = site.title;
+
+    const img = document.createElement('img');
+    img.src = getFaviconUrl(site.url, site.img); img.onerror = () => { img.style.display='none'; }; img.alt = site.title;
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'fav-title'; titleEl.textContent = site.title;
+
+    // Drag handle hint
+    const handle = document.createElement('div');
+    handle.className = 'drag-handle'; handle.textContent = '⠿'; handle.title = 'Drag to reorder';
+
+    card.appendChild(img); card.appendChild(titleEl); card.appendChild(handle);
+
+    // Per-card flag to block click after drag
+    let cardWasDragged = false;
+
+    card.onclick = (e) => { e.preventDefault(); if (!cardWasDragged) window.location.href = site.url; };
+    card.oncontextmenu = (e) => { e.preventDefault(); showCtxMenu(e, i); };
+
+    // ── Desktop drag ──
+    card.draggable = true;
+    card.addEventListener('dragstart', () => {
+      dragSrcIdx = i; cardWasDragged = true;
+      card.dataset.dragsrc = '1';
+      setTimeout(() => card.classList.add('dragging'), 0);
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      delete card.dataset.dragsrc;
+      document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+      dragSrcIdx = -1;
+      setTimeout(() => { cardWasDragged = false; }, 80);
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (i === dragSrcIdx) return;
+      document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', e => {
+      if (!card.contains(e.relatedTarget)) card.classList.remove('drag-over');
+    });
+    card.addEventListener('drop', e => {
+      e.preventDefault(); card.classList.remove('drag-over');
+      if (dragSrcIdx < 0 || dragSrcIdx === i) return;
+      const [moved] = favorites.splice(dragSrcIdx, 1);
+      favorites.splice(i, 0, moved);
+      saveFavorites(); renderGrid();
+    });
+
+    // ── Touch drag (long-press 500 ms) ──
+    card.addEventListener('touchstart', e => {
+      TD.startX = e.touches[0].clientX; TD.startY = e.touches[0].clientY;
+      TD.timer = setTimeout(() => {
+        TD.active = true; TD.srcIdx = i;
+        card.classList.add('dragging');
+        const r = card.getBoundingClientRect();
+        TD.clone = card.cloneNode(true);
+        Object.assign(TD.clone.style, {
+          position:'fixed', width:r.width+'px', height:r.height+'px',
+          left:(TD.startX - r.width/2)+'px', top:(TD.startY - r.height/2)+'px',
+          opacity:'.85', zIndex:'999', pointerEvents:'none', transform:'scale(1.08)', borderRadius:'16px'
+        });
+        document.body.appendChild(TD.clone);
+        if (navigator.vibrate) navigator.vibrate(40);
+      }, 500);
+    }, {passive:true});
+
+    card.addEventListener('touchmove', e => {
+      if (!TD.active) {
+        if (Math.abs(e.touches[0].clientX-TD.startX)>8 || Math.abs(e.touches[0].clientY-TD.startY)>8)
+          clearTimeout(TD.timer);
+        return;
+      }
+      e.preventDefault();
+      const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
+      if (TD.clone) { TD.clone.style.left=(tx-TD.clone.offsetWidth/2)+'px'; TD.clone.style.top=(ty-TD.clone.offsetHeight/2)+'px'; }
+      if (TD.clone) TD.clone.style.display='none';
+      const el = document.elementFromPoint(tx, ty);
+      if (TD.clone) TD.clone.style.display='';
+      const tc = el?.closest?.('.fav-card:not(.add-card)');
+      if (TD.targetCard && TD.targetCard !== tc) TD.targetCard.classList.remove('drag-over');
+      if (tc && tc !== card) { tc.classList.add('drag-over'); TD.targetCard = tc; }
+      else if (!tc) TD.targetCard = null;
+    }, {passive:false});
+
+    const touchEnd = e => {
+      clearTimeout(TD.timer);
+      if (!TD.active) return;
+      e.preventDefault();
+      card.classList.remove('dragging');
+      if (TD.clone) { TD.clone.remove(); TD.clone = null; }
+      if (TD.targetCard) {
+        TD.targetCard.classList.remove('drag-over');
+        const all = [...document.querySelectorAll('.fav-card:not(.add-card)')];
+        const ti = all.indexOf(TD.targetCard);
+        if (ti > -1 && ti !== TD.srcIdx) {
+          const [moved] = favorites.splice(TD.srcIdx, 1);
+          favorites.splice(ti, 0, moved);
+          saveFavorites(); renderGrid();
+        }
+        TD.targetCard = null;
+      }
+      TD.active = false; TD.srcIdx = -1;
+    };
+    card.addEventListener('touchend', touchEnd, {passive:false});
+    card.addEventListener('touchcancel', () => {
+      clearTimeout(TD.timer); card.classList.remove('dragging');
+      if (TD.clone) { TD.clone.remove(); TD.clone = null; }
+      if (TD.targetCard) { TD.targetCard.classList.remove('drag-over'); TD.targetCard = null; }
+      TD.active = false; TD.srcIdx = -1;
+    });
+
+    grid.appendChild(card);
+  });
+
+  if (favorites.length < MAX) {
+    const add = document.createElement('div');
+    add.className = 'fav-card add-card';
+    add.innerHTML = '<div class="add-icon">+</div>';
+    add.onclick = e => { e.stopPropagation(); openModal(); };
+    grid.appendChild(add);
+  }
+}
+renderGrid();
+
+// ── Add/Edit Modal ──
+let editIndex = -1;
+function openModal(idx = -1) {
+  editIndex = idx;
+  document.getElementById('modal-title').textContent = idx === -1 ? 'Add Website' : 'Edit Website';
+  document.getElementById('m-url').value   = idx === -1 ? '' : favorites[idx].url;
+  document.getElementById('m-title').value = idx === -1 ? '' : favorites[idx].title;
+  document.getElementById('m-img').value   = idx === -1 ? '' : (favorites[idx].img || '');
+  updateModalPreview(idx === -1 ? '' : favorites[idx].url, idx === -1 ? '' : (favorites[idx].img || ''));
+  document.getElementById('modal-bg').classList.add('open');
+  setTimeout(() => document.getElementById('m-url').focus(), 50);
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+function updateModalPreview(url, custom) {
+  const imgEl = document.getElementById('m-preview'), hint = document.getElementById('m-hint');
+  const src = getFaviconUrl(url, custom);
+  if (src && url.trim()) {
+    imgEl.src = src; imgEl.style.display = 'block';
+    imgEl.onerror = () => { imgEl.style.display='none'; hint.textContent='Could not load icon'; };
+    hint.textContent = '';
+  } else { imgEl.style.display='none'; hint.textContent='Enter a URL to preview icon'; }
+}
+function previewIcon() { updateModalPreview(document.getElementById('m-url').value, document.getElementById('m-img').value); }
+
+function saveEntry() {
+  let url = document.getElementById('m-url').value.trim();
+  const title = document.getElementById('m-title').value.trim(), img = document.getElementById('m-img').value.trim();
+  if (!url || !title) { alert('Please enter both URL and title.'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  const entry = { url, title, img };
+  if (editIndex === -1) favorites.push(entry); else favorites[editIndex] = entry;
+  saveFavorites(); renderGrid(); closeModal();
+}
+document.getElementById('modal-bg').addEventListener('click', e => { if (e.target===e.currentTarget) closeModal(); });
+
+// ── Context Menu ──
+let ctxIndex = -1;
+function showCtxMenu(e, i) {
+  ctxIndex = i; const menu = document.getElementById('ctx-menu'); menu.style.display = 'block';
+  let x = e.clientX, y = e.clientY;
+  if (x+160>window.innerWidth)  x = window.innerWidth  - 168;
+  if (y+90 >window.innerHeight) y = window.innerHeight - 98;
+  menu.style.left = x+'px'; menu.style.top = y+'px';
+}
+function ctxEdit()   { const i=ctxIndex; closeCtx(); openModal(i); }
+function ctxDelete() { const i=ctxIndex; closeCtx(); if (i>-1){favorites.splice(i,1);saveFavorites();renderGrid();} }
+function closeCtx()  { document.getElementById('ctx-menu').style.display='none'; ctxIndex=-1; }
+document.addEventListener('click', closeCtx);
+document.addEventListener('contextmenu', e => { if (!e.target.closest('.fav-card:not(.add-card)')) closeCtx(); });
+
+// ═══════════════════════════════════════════
+//  GOOGLE APPS PANEL
+// ═══════════════════════════════════════════
+const googleApps = [
+  {name:'Search',     url:'https://google.com',              icon:'https://ssl.gstatic.com/images/branding/product/1x/googleg_64dp.png'},
+  {name:'Gmail',      url:'https://mail.google.com',         icon:'https://ssl.gstatic.com/images/branding/product/1x/gmail_2020q4_64dp.png'},
+  {name:'Drive',      url:'https://drive.google.com',        icon:'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png'},
+  {name:'YouTube',    url:'https://youtube.com',             icon:'https://ssl.gstatic.com/images/branding/product/1x/youtube_64dp.png'},
+  {name:'Gemini',     url:'https://gemini.google.com',       icon:'https://ssl.gstatic.com/images/branding/product/1x/gemini_64dp.png'},
+  {name:'Maps',       url:'https://maps.google.com',         icon:'https://ssl.gstatic.com/images/branding/product/1x/maps_64dp.png'},
+  {name:'Translate',  url:'https://translate.google.com',    icon:'https://ssl.gstatic.com/translate/favicon.ico'},
+  {name:'News',       url:'https://news.google.com',         icon:'https://ssl.gstatic.com/images/branding/product/1x/news_32dp.png'},
+  {name:'Calendar',   url:'https://calendar.google.com',     icon:'https://ssl.gstatic.com/images/branding/product/1x/calendar_2020q4_64dp.png'},
+  {name:'Keep',       url:'https://keep.google.com',         icon:'https://ssl.gstatic.com/images/branding/product/1x/keep_2020q4_64dp.png'},
+  {name:'Photos',     url:'https://photos.google.com',       icon:'https://ssl.gstatic.com/images/branding/product/1x/photos_64dp.png'},
+  {name:'Docs',       url:'https://docs.google.com',         icon:'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico'},
+  {name:'Sheets',     url:'https://sheets.google.com',       icon:'https://ssl.gstatic.com/docs/spreadsheets/favicon3.ico'},
+  {name:'Slides',     url:'https://slides.google.com',       icon:'https://ssl.gstatic.com/images/branding/product/1x/slides_2020q4_64dp.png'},
+  {name:'Vids',       url:'https://docs.google.com/videos/', icon:'https://ssl.gstatic.com/images/branding/product/1x/vids_64dp.png'},
+  {name:'Earth',      url:'https://earth.google.com',        icon:'https://ssl.gstatic.com/images/branding/product/1x/earth_64dp.png'},
+  {name:'Meet',       url:'https://meet.google.com',         icon:'https://ssl.gstatic.com/images/branding/product/1x/meet_2020q4_64dp.png'},
+  {name:'Contacts',   url:'https://contacts.google.com',     icon:'https://ssl.gstatic.com/images/branding/product/1x/contacts_2022_64dp.png'},
+  {name:'NotebookLM', url:'https://notebooklm.google.com',   icon:'https://ssl.gstatic.com/images/branding/product/1x/notebooklm_64dp.png'},
+  {name:'Tasks',      url:'https://tasks.google.com',        icon:'https://ssl.gstatic.com/images/branding/product/1x/tasks_64dp.png'},
+  {name:'Chats',      url:'https://chat.google.com/',        icon:'https://ssl.gstatic.com/images/branding/product/1x/chat_2020q4_64dp.png'},
+  {name:'Forms',      url:'https://docs.google.com/forms/',  icon:'https://ssl.gstatic.com/images/branding/product/1x/forms_64dp.png'},
+  {name:'Travel',     url:'https://www.google.com/travel/',  icon:'https://ssl.gstatic.com/images/branding/product/1x/travel_64dp.png'},
+  {name:'YT Music',   url:'https://music.youtube.com/',      icon:'https://ssl.gstatic.com/images/branding/product/1x/youtube_music_64dp.png'},
+  {name:'Blogger',    url:'https://www.blogger.com/',        icon:'https://ssl.gstatic.com/images/branding/product/1x/blogger_64dp.png'},
+  {name:'Ads',        url:'https://ads.google.com/',         icon:'https://ssl.gstatic.com/images/branding/product/1x/ads_64dp.png'},
+];
+
+function buildAppsGrid() {
+  const grid = document.getElementById('apps-grid');
+  googleApps.forEach(app => {
+    const a = document.createElement('a');
+    a.className='app-item'; a.href=app.url; a.target='_blank'; a.rel='noopener';
+    a.onclick=e=>{e.stopPropagation();};
+    const img=document.createElement('img'); img.src=app.icon; img.alt=app.name;
+    img.onerror=()=>{
+      img.style.display='none';
+      const fb=document.createElement('div');
+      fb.style.cssText='width:40px;height:40px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;color:white;font-family:sans-serif;';
+      fb.textContent=app.name[0]; a.insertBefore(fb,a.firstChild);
+    };
+    const name=document.createElement('span'); name.textContent=app.name;
+    a.appendChild(img); a.appendChild(name); grid.appendChild(a);
+  });
+}
+buildAppsGrid();
+
+document.getElementById('dots-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('apps-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('active');
+});
+function closePanel() {
+  document.getElementById('apps-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
+}
+document.getElementById('settings-modal').addEventListener('click', e => { if (e.target===e.currentTarget) closeSettings(); });
+
+// ── INIT ──
+applyAll();
+</script>
+</body>
+</html>

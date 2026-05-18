@@ -391,12 +391,25 @@
     }
     .reset-row { display: flex; justify-content: space-between; align-items: center; }
 
-    /* ── MOBILE ── */
+    /* ── MOBILE & PORTRAIT RESPONSIVENESS ── */
     @media (max-width: 600px), (orientation: portrait) {
       #quote-wrap { top: 105px; width: 90vw; max-width: 90vw; font-size: clamp(8px,2.2vw,10px); line-height: 1.6; }
-      #search-wrap { top: 55%; }
-      #search-wrap.grid-visible { top: 185px; }
-      #fav-section { top: 265px; }
+      
+      /* Scale down search bar size and placement */
+      #search-wrap { top: 55%; width: min(340px, 85vw); }
+      #search-wrap.grid-visible { top: 175px; }
+      #search-bar { padding: 10px 16px; gap: 8px; }
+      #engine-icon-wrap { width: 20px; height: 20px; }
+      #engine-icon-wrap img { width: 20px; height: 20px; }
+      #search-input { font-size: 8px; }
+      
+      /* Scale down favorites grid section and cards */
+      #fav-section { top: 245px; width: min(360px, 92vw); }
+      #fav-grid { gap: 8px; justify-content: center; }
+      .fav-card { width: 105px; height: 76px; border-radius: 12px; gap: 6px; }
+      .fav-card img { width: 30px; height: 30px; border-radius: 6px; }
+      .fav-card .fav-title { font-size: 7px; max-width: 90px; }
+      .add-icon { font-size: 22px; }
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -443,7 +456,6 @@
   <div id="apps-grid"></div>
 </div>
 
-<!-- Favorite Add/Edit Modal -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h2 id="modal-title">Add Website</h2>
@@ -461,26 +473,21 @@
   </div>
 </div>
 
-<!-- Context Menu -->
 <div id="ctx-menu">
   <button onclick="ctxEdit()">✎ Edit</button>
   <div id="ctx-divider"></div>
   <button class="danger" onclick="ctxDelete()">✕ Delete</button>
 </div>
 
-<!-- Settings Modal -->
 <div class="modal-bg" id="settings-modal">
   <div class="modal" onclick="stopProp(event)">
 
-    <!-- ══ MAIN PAGE ══ -->
     <div id="settings-main-page">
       <h2>⚙ Settings</h2>
 
-      <!-- Search Engine -->
       <label>Search Engine</label>
       <div class="engine-grid" id="engine-cards"></div>
 
-      <!-- Custom engine form -->
       <div id="custom-engine-form">
         <label>Engine Name</label>
         <input type="text" id="ce-name" placeholder="My Engine" oninput="onCustomEngineChange()" />
@@ -492,7 +499,6 @@
 
       <div class="settings-divider"></div>
 
-      <!-- Background -->
       <label>Background Image</label>
       <div class="bg-row">
         <input type="text" id="s-bg" placeholder="https://... or file:///D:/path/image.jpg" oninput="onBgUrlType()" />
@@ -503,7 +509,6 @@
 
       <div class="settings-divider"></div>
 
-      <!-- Toggles -->
       <label class="toggle-row" for="s-quotes">
         <input type="checkbox" id="s-quotes" onchange="syncSettingsFromUI()" />
         <span>Show Daily Quote</span>
@@ -524,7 +529,6 @@
 
       <div class="settings-divider"></div>
 
-      <!-- Interface sub-panel trigger -->
       <button class="btn-section-nav" onclick="showSubPanel()">
         Interface & Opacity
         <span class="nav-arrow">›</span>
@@ -533,14 +537,10 @@
       <div class="modal-btns">
         <button class="btn btn-primary" onclick="closeSettings()">Done</button>
       </div>
-    </div><!-- end #settings-main-page -->
-
-    <!-- ══ INTERFACE SUB-PAGE ══ -->
-    <div id="settings-sub-page">
+    </div><div id="settings-sub-page">
       <button class="back-btn" onclick="hideSubPanel()">‹ Back</button>
       <h2 style="margin-bottom:22px;">Interface</h2>
 
-      <!-- Idle bar -->
       <span class="sub-section-label">Search Bar — Before Click</span>
       <p class="opacity-hint">Opacity while the favorites grid is hidden</p>
       <div class="slider-row">
@@ -550,7 +550,6 @@
 
       <div class="settings-divider"></div>
 
-      <!-- Active bar -->
       <span class="sub-section-label">Search Bar — After Click</span>
       <p class="opacity-hint">Opacity while the favorites grid is visible</p>
       <div class="slider-row">
@@ -558,7 +557,6 @@
         <span class="slider-val" id="active-val">82%</span>
       </div>
 
-      <!-- Cards -->
       <span class="sub-section-label">Cards — After Click</span>
       <p class="opacity-hint">Background opacity of each favorite card</p>
       <div class="slider-row">
@@ -568,7 +566,6 @@
 
       <div class="settings-divider"></div>
 
-      <!-- Blur -->
       <span class="sub-section-label">Interface Blur</span>
       <p class="opacity-hint">Backdrop blur strength for search bar and cards</p>
       <div class="slider-row">
@@ -582,12 +579,7 @@
         <button class="btn btn-danger" style="font-size:7px;" onclick="resetOpacities()">↺ Reset Defaults</button>
         <button class="btn btn-primary" onclick="saveOpacities()">Save</button>
       </div>
-    </div><!-- end #settings-sub-page -->
-
-  </div><!-- end .modal -->
-</div><!-- end #settings-modal -->
-
-<script>
+    </div></div></div><script>
 // ═══════════════════════════════════════════
 //  ENGINE DEFINITIONS
 // ═══════════════════════════════════════════
@@ -754,38 +746,6 @@ function applyBgFromState() {
   else if (stored) el.style.backgroundImage = `url('${stored}')`;
 }
 
-function onBgUrlType() {
-  const val = document.getElementById('s-bg').value.trim();
-  S.bg = val;
-  if (val) { localStorage.removeItem('bgDataUrl'); updateBgFileLabel(); }
-  document.getElementById('bg').style.backgroundImage = val ? `url('${val}')` : '';
-  saveSettings();
-}
-
-function handleBgFile(input) {
-  const file = input.files[0]; if (!file) return;
-  updateBgFileLabel('Loading…');
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const data = e.target.result;
-    try { localStorage.setItem('bgDataUrl', data); } catch(err) { console.warn('Image too large for storage.'); }
-    S.bg = ''; document.getElementById('s-bg').value = '';
-    saveSettings();
-    document.getElementById('bg').style.backgroundImage = `url('${data}')`;
-    updateBgFileLabel(file.name);
-  };
-  reader.readAsDataURL(file); input.value = '';
-}
-
-function updateBgFileLabel(name) {
-  const el = document.getElementById('bg-file-name');
-  const stored = localStorage.getItem('bgDataUrl');
-  if (name && name !== 'Loading…') { el.textContent = '\u2713 ' + name; el.classList.add('has-file'); }
-  else if (name === 'Loading…')    { el.textContent = 'Loading\u2026'; el.classList.remove('has-file'); }
-  else if (stored && !S.bg)        { el.textContent = '\u2713 File loaded'; el.classList.add('has-file'); }
-  else                             { el.textContent = 'No file chosen'; el.classList.remove('has-file'); }
-}
-
 // ═══════════════════════════════════════════
 //  SEARCH ENGINE
 // ═══════════════════════════════════════════
@@ -856,6 +816,38 @@ function onCustomEngineChange() {
   }
 }
 
+function onBgUrlType() {
+  const val = document.getElementById('s-bg').value.trim();
+  S.bg = val;
+  if (val) { localStorage.removeItem('bgDataUrl'); updateBgFileLabel(); }
+  document.getElementById('bg').style.backgroundImage = val ? `url('${val}')` : '';
+  saveSettings();
+}
+
+function handleBgFile(input) {
+  const file = input.files[0]; if (!file) return;
+  updateBgFileLabel('Loading…');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = e.target.result;
+    try { localStorage.setItem('bgDataUrl', data); } catch(err) { console.warn('Image too large for storage.'); }
+    S.bg = ''; document.getElementById('s-bg').value = '';
+    saveSettings();
+    document.getElementById('bg').style.backgroundImage = `url('${data}')`;
+    updateBgFileLabel(file.name);
+  };
+  reader.readAsDataURL(file); input.value = '';
+}
+
+function updateBgFileLabel(name) {
+  const el = document.getElementById('bg-file-name');
+  const stored = localStorage.getItem('bgDataUrl');
+  if (name && name !== 'Loading…') { el.textContent = '\u2713 ' + name; el.classList.add('has-file'); }
+  else if (name === 'Loading…')    { el.textContent = 'Loading\u2026'; el.classList.remove('has-file'); }
+  else if (stored && !S.bg)        { el.textContent = '\u2713 File loaded'; el.classList.add('has-file'); }
+  else                             { el.textContent = 'No file chosen'; el.classList.remove('has-file'); }
+}
+
 // ═══════════════════════════════════════════
 //  CLOCK
 // ═══════════════════════════════════════════
@@ -919,7 +911,6 @@ function displayQuote(q) {
 
 function loadDailyQuote() {
   const now = new Date();
-  // Changes every 12 hours reliably based on the date
   const index = (now.getDate() + Math.floor(now.getHours() / 12)) % PHILOSOPHICAL_QUOTES.length;
   displayQuote(PHILOSOPHICAL_QUOTES[index]);
 }
@@ -972,7 +963,6 @@ function getFaviconUrl(url, custom) {
   } catch { return ''; }
 }
 
-// Module-level drag state
 let dragSrcIdx = -1;
 const TD = { active:false, srcIdx:-1, targetCard:null, clone:null, timer:null, startX:0, startY:0 };
 
@@ -990,19 +980,16 @@ function renderGrid() {
     const titleEl = document.createElement('div');
     titleEl.className = 'fav-title'; titleEl.textContent = site.title;
 
-    // Drag handle hint
     const handle = document.createElement('div');
     handle.className = 'drag-handle'; handle.textContent = '⠿'; handle.title = 'Drag to reorder';
 
     card.appendChild(img); card.appendChild(titleEl); card.appendChild(handle);
 
-    // Per-card flag to block click after drag
     let cardWasDragged = false;
 
     card.onclick = (e) => { e.preventDefault(); if (!cardWasDragged) window.location.href = site.url; };
     card.oncontextmenu = (e) => { e.preventDefault(); showCtxMenu(e, i); };
 
-    // ── Desktop drag ──
     card.draggable = true;
     card.addEventListener('dragstart', () => {
       dragSrcIdx = i; cardWasDragged = true;
@@ -1033,7 +1020,6 @@ function renderGrid() {
       saveFavorites(); renderGrid();
     });
 
-    // ── Touch drag (long-press 500 ms) ──
     card.addEventListener('touchstart', e => {
       TD.startX = e.touches[0].clientX; TD.startY = e.touches[0].clientY;
       TD.timer = setTimeout(() => {
@@ -1109,7 +1095,6 @@ function renderGrid() {
 }
 renderGrid();
 
-// ── Add/Edit Modal ──
 let editIndex = -1;
 function openModal(idx = -1) {
   editIndex = idx;
@@ -1145,7 +1130,6 @@ function saveEntry() {
 }
 document.getElementById('modal-bg').addEventListener('click', e => { if (e.target===e.currentTarget) closeModal(); });
 
-// ── Context Menu ──
 let ctxIndex = -1;
 function showCtxMenu(e, i) {
   ctxIndex = i; const menu = document.getElementById('ctx-menu'); menu.style.display = 'block';

@@ -15,12 +15,19 @@
       --card-alpha:       0.75;   /* favorite card background     */
       --add-card-alpha:   0.60;   /* slightly less opacity for the add card */
       --ui-blur:          10px;   /* backdrop blur for UI elements */
+      --card-w:           150px;  /* favorite card width */
+      --card-h:           101px;  /* favorite card height */
+      --search-w:         470px;  /* search bar max-width */
+      --grid-cols:        5;      /* favorites grid columns */
+      --page-font-size:   1;      /* font size multiplier (rem base) */
+      --page-font-family: 'Press Start 2P', monospace;
     }
 
     /* Set default font here, let elements inherit it */
     body {
       width: 100vw; height: 100vh; overflow: hidden;
-      font-family: 'Press Start 2P', monospace;
+      font-family: var(--page-font-family);
+      font-size: calc(var(--page-font-size) * 10px);
       background: #111; user-select: none;
     }
     input, button, select, textarea { font-family: inherit; }
@@ -81,7 +88,7 @@
     /* ── SEARCH BAR ── */
     #search-wrap {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
-      z-index: 10; width: min(470px,90vw);
+      z-index: 10; width: min(var(--search-w),90vw);
       transition: transform .4s cubic-bezier(.4,0,.2,1), top .4s cubic-bezier(.4,0,.2,1);
     }
     #search-wrap.grid-visible { top: 130px; transform: translate(-50%,0); }
@@ -117,15 +124,15 @@
     #fav-section {
       position: fixed; top: 210px; left: 50%;
       transform: translateX(-50%) translateY(12px);
-      z-index: 10; width: min(860px,95vw);
+      z-index: 10; width: min(calc(var(--grid-cols) * (var(--card-w) + 12px)), 98vw);
       opacity: 0; pointer-events: none;
       transition: opacity .35s ease, transform .35s ease;
     }
     #fav-section.visible { opacity: 1; pointer-events: all; transform: translateX(-50%) translateY(0); }
-    #fav-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    #fav-grid { display: grid; grid-template-columns: repeat(var(--grid-cols), var(--card-w)); gap: 12px; justify-content: center; }
 
     .fav-card {
-      width: 150px; height: 101px;
+      width: var(--card-w); height: var(--card-h);
       /* opacity and blur controlled by CSS var */
       background: rgba(0,0,0,var(--card-alpha));
       backdrop-filter: blur(var(--ui-blur));
@@ -534,6 +541,11 @@
         <span class="nav-arrow">›</span>
       </button>
 
+      <button class="btn-section-nav" onclick="showLayoutPanel()">
+        Layout & Fonts
+        <span class="nav-arrow">›</span>
+      </button>
+
       <div class="modal-btns">
         <button class="btn btn-primary" onclick="closeSettings()">Done</button>
       </div>
@@ -579,7 +591,74 @@
         <button class="btn btn-danger" style="font-size:7px;" onclick="resetOpacities()">↺ Reset Defaults</button>
         <button class="btn btn-primary" onclick="saveOpacities()">Save</button>
       </div>
-    </div></div></div><script>
+    </div></div></div><div class="modal-bg" id="layout-modal">
+  <div class="modal" onclick="stopProp(event)">
+    <div id="layout-panel-page">
+      <button class="back-btn" onclick="closeLayoutPanel()">‹ Back</button>
+      <h2 style="margin-bottom:22px;">Layout &amp; Fonts</h2>
+
+      <span class="sub-section-label">Card Size</span>
+      <p class="opacity-hint">Width and height of each favorite card</p>
+      <select id="s-card-size" class="settings-select" onchange="syncLayoutFromUI()">
+        <option value="small">Small</option>
+        <option value="medium">Medium (Default)</option>
+        <option value="large">Large</option>
+      </select>
+
+      <span class="sub-section-label">Search Bar Width</span>
+      <p class="opacity-hint">Maximum width of the search bar</p>
+      <select id="s-search-size" class="settings-select" onchange="syncLayoutFromUI()">
+        <option value="small">Small (340px)</option>
+        <option value="medium">Medium — Default (470px)</option>
+        <option value="large">Large (600px)</option>
+      </select>
+
+      <div class="settings-divider"></div>
+
+      <span class="sub-section-label">Grid Columns</span>
+      <p class="opacity-hint">Number of cards per row (default: 5)</p>
+      <div class="slider-row">
+        <input type="range" id="s-grid-cols" min="2" max="8" step="1" oninput="onGridSlider()" />
+        <span class="slider-val" id="grid-cols-val">5</span>
+      </div>
+
+      <span class="sub-section-label">Grid Rows</span>
+      <p class="opacity-hint">Number of card rows (default: 3)</p>
+      <div class="slider-row">
+        <input type="range" id="s-grid-rows" min="1" max="6" step="1" oninput="onGridSlider()" />
+        <span class="slider-val" id="grid-rows-val">3</span>
+      </div>
+      <p class="opacity-hint" id="grid-total-hint">Total: 15 cards max</p>
+
+      <div class="settings-divider"></div>
+
+      <span class="sub-section-label">Font Family</span>
+      <p class="opacity-hint">Typeface used across the whole page</p>
+      <select id="s-font-family" class="settings-select" onchange="syncFontFromUI()">
+        <option value="press-start">Press Start 2P (Default)</option>
+        <option value="inter">Inter / Segoe UI</option>
+        <option value="roboto">Roboto / Arial</option>
+        <option value="georgia">Georgia (Serif)</option>
+        <option value="courier">Courier New (Mono)</option>
+        <option value="system">System Default</option>
+      </select>
+
+      <span class="sub-section-label">Font Size</span>
+      <p class="opacity-hint">Base size multiplier for all text</p>
+      <select id="s-font-size" class="settings-select" onchange="syncFontFromUI()">
+        <option value="small">Small (80%)</option>
+        <option value="medium">Medium — Default (100%)</option>
+        <option value="large">Large (125%)</option>
+      </select>
+
+      <div class="reset-row">
+        <button class="btn btn-danger" style="font-size:7px;" onclick="resetLayoutFonts()">↺ Reset Defaults</button>
+        <button class="btn btn-primary" onclick="closeLayoutPanel()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
 // ═══════════════════════════════════════════
 //  ENGINE DEFINITIONS
 // ═══════════════════════════════════════════
@@ -606,6 +685,12 @@ const DEFAULTS = {
   showQuotes: true, clockFormat: '12h', dateFormat: 'DD MMM YYYY',
   engine: 'google',
   idleBarAlpha: 0.40, activeBarAlpha: 0.82, cardAlpha: 0.75, uiBlur: 5,
+  cardSize: 'medium',   // small | medium | large
+  searchSize: 'medium', // small | medium | large
+  gridCols: 5,
+  gridRows: 3,
+  fontFamily: 'press-start',
+  fontSize: 'medium',   // small | medium | large
 };
 
 let S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('userSettings') || '{}') };
@@ -619,6 +704,8 @@ function applyAll() {
   syncCustomEngine();
   renderEngineIcon();
   applyOpacities();
+  applyLayoutSettings();
+  applyFontSettings();
 }
 
 function syncSettingsFromUI() {
@@ -636,6 +723,8 @@ function loadSettingsUI() {
   syncCustomEngine();
   renderEngineCards();
   updateBgFileLabel();
+  loadLayoutUI();
+  loadFontUI();
 }
 
 function openSettings()  { loadSettingsUI(); document.getElementById('settings-modal').classList.add('open'); }
@@ -708,7 +797,7 @@ function liveOpacity() {
 }
 
 function updateSliderTracks() {
-  ['s-idle-alpha','s-active-alpha','s-card-alpha','s-blur'].forEach(id => {
+  ['s-idle-alpha','s-active-alpha','s-card-alpha','s-blur','s-grid-cols','s-grid-rows'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const min = parseFloat(el.min || 0);
@@ -734,6 +823,112 @@ function resetOpacities() {
   S.cardAlpha      = DEFAULTS.cardAlpha;
   S.uiBlur         = DEFAULTS.uiBlur;
   saveSettings(); applyOpacities(); loadOpacityUI();
+}
+
+// ═══════════════════════════════════════════
+//  LAYOUT SETTINGS (card size, search size, grid)
+// ═══════════════════════════════════════════
+const CARD_SIZES   = { small: {w:110,h:76},  medium: {w:150,h:101}, large: {w:190,h:128} };
+const SEARCH_SIZES = { small: '340px', medium: '470px', large: '600px' };
+
+function applyLayoutSettings() {
+  const r = document.documentElement;
+  const cs = CARD_SIZES[S.cardSize || DEFAULTS.cardSize];
+  r.style.setProperty('--card-w',    cs.w + 'px');
+  r.style.setProperty('--card-h',    cs.h + 'px');
+  r.style.setProperty('--search-w',  SEARCH_SIZES[S.searchSize || DEFAULTS.searchSize]);
+  r.style.setProperty('--grid-cols', S.gridCols ?? DEFAULTS.gridCols);
+  // Update MAX based on gridCols * gridRows
+  const cols = S.gridCols ?? DEFAULTS.gridCols;
+  const rows = S.gridRows ?? DEFAULTS.gridRows;
+  window._gridMax = cols * rows;
+}
+
+function loadLayoutUI() {
+  const cols = S.gridCols ?? DEFAULTS.gridCols;
+  const rows = S.gridRows ?? DEFAULTS.gridRows;
+  document.getElementById('s-card-size').value   = S.cardSize   || DEFAULTS.cardSize;
+  document.getElementById('s-search-size').value = S.searchSize || DEFAULTS.searchSize;
+  document.getElementById('s-grid-cols').value   = cols;
+  document.getElementById('s-grid-rows').value   = rows;
+  document.getElementById('grid-cols-val').textContent = cols;
+  document.getElementById('grid-rows-val').textContent = rows;
+  document.getElementById('grid-total-hint').textContent = 'Total: ' + (cols * rows) + ' cards max';
+  updateSliderTracks();
+}
+
+function syncLayoutFromUI() {
+  S.cardSize   = document.getElementById('s-card-size').value;
+  S.searchSize = document.getElementById('s-search-size').value;
+  S.gridCols   = parseInt(document.getElementById('s-grid-cols').value, 10);
+  S.gridRows   = parseInt(document.getElementById('s-grid-rows').value, 10);
+  saveSettings(); applyLayoutSettings(); renderGrid();
+}
+
+// ═══════════════════════════════════════════
+//  FONT SETTINGS
+// ═══════════════════════════════════════════
+const FONT_FAMILIES = {
+  'press-start': "'Press Start 2P', monospace",
+  'inter':       "'Inter', 'Segoe UI', sans-serif",
+  'roboto':      "'Roboto', 'Arial', sans-serif",
+  'georgia':     "'Georgia', 'Times New Roman', serif",
+  'courier':     "'Courier New', Courier, monospace",
+  'system':      "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+};
+const FONT_SIZES = { small: 0.8, medium: 1.0, large: 1.25 };
+
+function applyFontSettings() {
+  const r = document.documentElement;
+  const family = FONT_FAMILIES[S.fontFamily || DEFAULTS.fontFamily] || FONT_FAMILIES['press-start'];
+  const size   = FONT_SIZES[S.fontSize || DEFAULTS.fontSize] || 1.0;
+  r.style.setProperty('--page-font-family', family);
+  r.style.setProperty('--page-font-size', size);
+}
+
+function loadFontUI() {
+  document.getElementById('s-font-family').value = S.fontFamily || DEFAULTS.fontFamily;
+  document.getElementById('s-font-size').value   = S.fontSize   || DEFAULTS.fontSize;
+}
+
+function syncFontFromUI() {
+  S.fontFamily = document.getElementById('s-font-family').value;
+  S.fontSize   = document.getElementById('s-font-size').value;
+  saveSettings(); applyFontSettings();
+}
+
+function showLayoutPanel() {
+  loadLayoutUI();
+  document.getElementById('layout-modal').classList.add('open');
+}
+function closeLayoutPanel() {
+  document.getElementById('layout-modal').classList.remove('open');
+}
+
+function onGridSlider() {
+  const cols = parseInt(document.getElementById('s-grid-cols').value, 10);
+  const rows = parseInt(document.getElementById('s-grid-rows').value, 10);
+  document.getElementById('grid-cols-val').textContent = cols;
+  document.getElementById('grid-rows-val').textContent = rows;
+  document.getElementById('grid-total-hint').textContent = 'Total: ' + (cols * rows) + ' cards max';
+  updateSliderTracks();
+  // live preview
+  S.gridCols = cols; S.gridRows = rows;
+  saveSettings(); applyLayoutSettings(); renderGrid();
+}
+
+function resetLayoutFonts() {
+  S.cardSize   = DEFAULTS.cardSize;
+  S.searchSize = DEFAULTS.searchSize;
+  S.gridCols   = DEFAULTS.gridCols;
+  S.gridRows   = DEFAULTS.gridRows;
+  S.fontFamily = DEFAULTS.fontFamily;
+  S.fontSize   = DEFAULTS.fontSize;
+  saveSettings(); applyLayoutSettings(); applyFontSettings(); loadLayoutUI(); loadFontUI(); renderGrid();
+  document.getElementById('grid-cols-val').textContent = S.gridCols;
+  document.getElementById('grid-rows-val').textContent = S.gridRows;
+  document.getElementById('grid-total-hint').textContent = 'Total: ' + (S.gridCols * S.gridRows) + ' cards max';
+  updateSliderTracks();
 }
 
 // ═══════════════════════════════════════════
@@ -951,9 +1146,10 @@ document.getElementById('bg').addEventListener('click', toggleGrid);
 // ═══════════════════════════════════════════
 //  FAVORITES + DRAG & DROP
 // ═══════════════════════════════════════════
-const MAX = 15;
+const MAX_DEFAULT = 15;
 let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 function saveFavorites() { localStorage.setItem('favorites', JSON.stringify(favorites)); }
+function getMax() { return window._gridMax || MAX_DEFAULT; }
 
 function getFaviconUrl(url, custom) {
   if (custom && custom.trim()) return custom.trim();
@@ -1085,7 +1281,7 @@ function renderGrid() {
     grid.appendChild(card);
   });
 
-  if (favorites.length < MAX) {
+  if (favorites.length < getMax()) {
     const add = document.createElement('div');
     add.className = 'fav-card add-card';
     add.innerHTML = '<div class="add-icon">+</div>';

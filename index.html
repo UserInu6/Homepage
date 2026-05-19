@@ -75,7 +75,7 @@
       display: grid; grid-template-columns: repeat(3,8px); grid-template-rows: repeat(3,8px);
       gap: 4px; align-content: center; justify-content: center;
       cursor: pointer; padding: 4px; border-radius: 50%; transition: background .2s;
-	  transform: scale(0.8);
+      transform: scale(0.8);
       transform-origin: center;
       transition: transform 0.2s ease;
     }
@@ -411,8 +411,21 @@
       #search-input { font-size: 8px; }
       
       /* Scale down favorites grid section and cards */
-      #fav-section { top: 245px; width: min(360px, 92vw); }
-      #fav-grid { gap: 8px; justify-content: center; }
+      #fav-section { 
+        top: 245px; 
+        width: min(360px, 92vw); 
+        max-height: calc(100vh - 260px); 
+        overflow-y: auto; 
+        scrollbar-width: none; /* Firefox */
+      }
+      #fav-section::-webkit-scrollbar {
+        display: none; /* Safari and Chrome */
+      }
+      #fav-grid { 
+        grid-template-columns: repeat(3, 105px) !important; /* Forces 3 perfect columns on mobile, overriding inline script configurations */
+        gap: 8px; 
+        justify-content: center; 
+      }
       .fav-card { width: 105px; height: 76px; border-radius: 12px; gap: 6px; }
       .fav-card img { width: 30px; height: 30px; border-radius: 6px; }
       .fav-card .fav-title { font-size: 7px; max-width: 90px; }
@@ -498,9 +511,9 @@
       <div id="custom-engine-form">
         <label>Engine Name</label>
         <input type="text" id="ce-name" placeholder="My Engine" oninput="onCustomEngineChange()" />
-        <label>Search URL  <span class="ce-hint">use %s for the query</span></label>
+        <label>Search URL &nbsp;<span class="ce-hint">use %s for the query</span></label>
         <input type="text" id="ce-url" placeholder="https://example.com/search?q=%s" oninput="onCustomEngineChange()" />
-        <label>Icon URL  <span class="ce-hint">(optional)</span></label>
+        <label>Icon URL &nbsp;<span class="ce-hint">(optional)</span></label>
         <input type="text" id="ce-icon" placeholder="https://example.com/favicon.ico" oninput="onCustomEngineChange()" />
       </div>
 
@@ -780,7 +793,7 @@ function liveOpacity() {
   const idle   = document.getElementById('s-idle-alpha').value;
   const active = document.getElementById('s-active-alpha').value;
   const card   = document.getElementById('s-card-alpha').value;
-  const blur   = document.getElementById('s-blur').value;
+  const blur = document.getElementById('s-blur').value;
 
   document.getElementById('idle-val').textContent   = idle   + '%';
   document.getElementById('active-val').textContent = active + '%';
@@ -808,6 +821,9 @@ function updateSliderTracks() {
   });
 }
 
+// ═══════════════════════════════════════════
+//  SAVING / CONFIGS
+// ═══════════════════════════════════════════
 function saveOpacities() {
   S.idleBarAlpha   = document.getElementById('s-idle-alpha').value   / 100;
   S.activeBarAlpha = document.getElementById('s-active-alpha').value / 100;
@@ -1407,4 +1423,3 @@ applyAll();
 </script>
 </body>
 </html>
-
